@@ -1,0 +1,1110 @@
+---
+title: "MA 380 Project"
+author: "Brianna Cirillo"
+output: html_notebook
+---
+
+# Run this everytime we reopen the R file
+
+```{r}
+library(snpar)
+library(mosaic)
+library(haven)
+library(ggpubr)
+library(readxl)
+library(Rlab)
+library(boot)
+library(randtests)
+```
+
+# Import Data
+
+```{r}
+song.a <- c(1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,1,0,0,0)
+song.b <- c(0,0,0,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0)
+song.c <- c(1,0,1,0,1,0,0,0,0,1,1,0,0,0,0,0,0)
+song.d <- c(1,1,1,1,0,1,1,1,1,1,1,1,1,0,0,1,0)
+```
+
+# cmax function
+
+```{r}
+# function to take in a vector of 0s and 1s and calculate cmax
+cmax <- function(v) {
+  
+  # set count.miss to be 0
+  count.zero <- 0
+  
+  # set max to be empty vector
+  max <- c()
+  
+  for (i in 1:length(v)) {
+    # if it's a miss: count goes up, count is added to max vector, cmax takes the maximum of all values
+    if (v[i] == 1) {
+      count.zero <- count.zero + 1
+      max[i] <- count.zero
+      } else {
+    # if it's a hit count added is 0
+        count.zero <- 0
+        max[i] <- 0
+      }
+    suppressWarnings(cmax <- max(max))
+  }
+  # return calculated value of cmax
+  return(cmax)
+}
+```
+
+```{r}
+cmax(song.a)
+cmax(song.b)
+cmax(song.c)
+cmax(song.d)
+```
+
+# Method 1
+
+## Count number of individual misses (number of 1's)
+```{r}
+totalMiss <- function(v) {
+  # set hit and miss count to 0
+  count.miss <- 0 
+  count.hit <- 0
+  
+  miss <- c()
+  
+  for (i in 1:length(v)) {
+    # if it's a miss: count goes up, count is added to max vector, cmax takes the maximum of all values
+    if (v[i] == 1) {
+      count.miss <- count.miss + 1
+      miss[i] <- count.miss
+      } 
+    else {
+    # if it's a hit count added is 0
+        count.hit <- 0
+        miss[i] <- 0
+      }
+    suppressWarnings(totalMisses <- max(miss))
+  }
+  
+  # return calculated value of total misses
+  return(totalMisses)
+  
+}
+```
+
+## Counting how many miss streaks there are
+```{r}
+missStreak <- function(v) {
+ count.one <- 0
+  
+  count.streaks <- 0
+  
+  num.miss <- c()
+  
+  counts <- c()
+  
+  for (i in 1:length(v)) {
+    # if it's a miss: count goes up, count is added to counts vector, fills num.miss with a 1
+    if (v[i] == 1) {
+      count.one <- count.one + 1
+      counts[i] <- count.one
+      num.miss[i] <- 1
+      } else {
+    # if it's a hit count added is 0, count is added to counts vector, fills num.miss with a 0
+        count.one <- 0
+        counts[i] <- count.one + 0
+        num.miss[i] <- 0
+      }
+    }
+  for (j in 2:length(v)) {
+    if (counts[j] == 0 && counts[j-1] != 0) {
+      count.streaks <- count.streaks + 1
+      } else {
+        count.streaks <- count.streaks + 0
+      }
+  }
+  return(count.streaks)
+}
+```
+
+## Calculating Method 1
+```{r}
+method1 <- function(v) {
+  proportion <- c()
+  
+  proportion <- missStreak(v)/totalMiss(v)
+  
+  return(proportion)
+}
+```
+
+```{r}
+cat('SONG A: ', '\n', 
+  'Total Misses: ', totalMiss(song.a), '\n', 
+    'Total Number of Miss Streaks: ', missStreak(song.a), '\n', '\n')
+cat('SONG B: ', '\n', 
+  'Total Misses: ', totalMiss(song.b), '\n', 'Total Number of Miss Streaks: ', missStreak(song.b), '\n', '\n')
+cat('SONG C: ', '\n', 
+  'Total Misses: ', totalMiss(song.c), '\n', 
+    'Total Number of Miss Streaks: ', missStreak(song.c), '\n', '\n')
+cat('SONG D: ', '\n', 
+  'Total Misses: ', totalMiss(song.d), '\n', 
+    'Total Number of Miss Streaks: ', missStreak(song.d), '\n', '\n')
+cat('\n', '--- CALCULATIONS FOR METHOD 1 ---', '\n')
+cat('Song A: ', method1(song.a), '\n')
+cat('Song B: ', method1(song.b), '\n')
+cat('Song C: ', method1(song.c), '\n')
+cat('Song D: ', method1(song.d), '\n')
+```
+
+## METHOD 2
+
+# count number of hits between misses
+```{r}
+method2 <- function(v) {
+  # set number of hits to 0
+  count.hit <- 0
+  
+  # make an empty vector
+  hits <- c()
+  
+  j  <- 1
+  
+  distance <- c()
+  
+  for(i in 1:length(v)) {
+    # if a hit, count increases 
+    if (isTRUE(v[1] == 0)) {
+      
+    }
+    
+    if(v[i] == 0) {
+      count.hit <- count.hit + 1
+      hits[i] <- count.hit
+    }
+    else
+    {
+      count.hit <- 0
+      hits[i] <- count.hit
+    }
+    for (j in 1:length(v)-1) {
+      if (isTRUE(hits[i] == 0 & hits[i+j] == 0)) {
+        distance[i] <- hits[i+j-1]
+        j <- j+1
+        } else {
+          j<- j+1
+        }
+      }
+    suppressWarnings(numHits <- hits)
+  }
+  distance <- distance[!is.na(distance)]
+  distance <- distance[distance!=0]
+  if (v[1] == 0) {
+    distance <- distance[2:length(song.a)]
+    distance <- distance[!is.na(distance)]
+  } else {
+    distance <- distance
+  }
+  return(distance)
+}
+```
+
+```{r}
+cat('\n', '--- CALCULATIONS FOR METHOD 2 ---', '\n')
+cat('Song A: ', method2(song.a), '\n')
+cat('Song B: ', method2(song.b), '\n')
+cat('Song C: ', method2(song.c), '\n')
+cat('Song D: ', method2(song.d), '\n')
+```
+
+# Bootstrapping for cmax, method 1, method 2
+
+```{r}
+n.song.a <- length(song.a)
+n.song.b <- length(song.b)
+n.song.c <- length(song.c)
+n.song.d <- length(song.d)
+
+nboot <- 2000
+```
+
+## Look at how to run bootstrap on song a
+
+```{r}
+bootstraps.a <- c()
+for (i in nboot) {
+  bsample.a <- sample(song.a, n.song.a, replace = TRUE)
+  bootstraps.a <- c(median(bsample.a), bootstraps.a)
+}
+
+boot.sa.a <- matrix(sample(song.a, size = n.song.a * nboot, replace = TRUE), nboot, n.song.a)
+
+bootstat.a <- apply(boot.sa.a, 1, cmax)
+```
+
+## Bootstrapping for cmax
+
+```{r}
+bootstrap.cmax <- function(x, y, z){
+  bootstraps <- c()
+  
+  for (i in y) {
+  bsample <- sample(x, z, replace = TRUE)
+   bootstraps <- c(median(bsample), bootstraps)
+}
+
+boot.sa <- matrix(sample(x, size = z * y, replace = TRUE), y, z)
+
+bootstat <- apply(boot.sa, 2, cmax)
+}
+  
+```
+
+```{r}
+cat('Bootstrapping Each song Using the cmax Function', '\n') 
+cat('Song a: ', bootstrap.cmax(song.a, nboot, n.song.a), '\n')
+cat('Song b: ', bootstrap.cmax(song.b, nboot, n.song.b), '\n')
+cat('Song c: ', bootstrap.cmax(song.c, nboot, n.song.c), '\n')
+cat('Song d: ', bootstrap.cmax(song.d, nboot, n.song.d), '\n')
+```
+
+## Method 1
+
+```{r}
+bootstrap.method1 <- function(x, y, z){
+  bootstraps <- c()
+  
+  for (i in y) {
+  bsample <- sample(x, z, replace = TRUE)
+  bootstraps <- c(median(bsample), bootstraps)
+}
+
+boot.sa <- matrix(sample(x, size = z * y, replace = TRUE), y, z)
+
+bootstat <- apply(boot.sa, 2, method1)
+}
+  
+```
+
+```{r}
+cat('Bootstrapping Each song Using the Method 1 Function', '\n') 
+cat('Song a: ', bootstrap.method1(song.a, nboot, n.song.a), '\n', '\n')
+cat('Song b: ', bootstrap.method1(song.b, nboot, n.song.b), '\n', '\n')
+cat('Song c: ', bootstrap.method1(song.c, nboot, n.song.c), '\n', '\n')
+cat('Song d: ', bootstrap.method1(song.d, nboot, n.song.d), '\n')
+```
+
+## Method 2
+
+```{r}
+bootstrap.method2 <- function(x, y, z){
+  bootstraps <- c()
+  
+  for (i in y) {
+  bsample <- sample(x, z, replace = TRUE)
+  bootstraps <- c(median(bsample), bootstraps)
+}
+
+boot.sa <- matrix(sample(x, size = z * y, replace = TRUE), y, z)
+
+bootstat <- apply(boot.sa, 1, method2)
+}
+```
+
+```{r}
+method2.test <- function(m, song) {
+  method2.vals <- c()
+  
+ 
+  for(i in 1:nrow(m)) {
+    method2.vals <- method2(m[i,])
+  }
+  
+  method2.test.stat <- method2(song)
+  
+  suppressWarnings(pval <- 2 * min(sum(method2.vals >= method2.test.stat), sum(method2.vals <= method2.test.stat)) / 1000)
+  return(pval)
+}
+```
+
+
+```{r}
+cat('Bootstrapping Each song Using the Method 2 Function', '\n') 
+cat('Song a: ', bootstrap.method2(song.a, nboot, n.song.a), '\n', '\n')
+cat('Song b: ', bootstrap.method2(song.b, nboot, n.song.b), '\n', '\n')
+cat('Song c: ', bootstrap.method2(song.c, nboot, n.song.c), '\n', '\n')
+cat('Song d: ', bootstrap.method2(song.d, nboot, n.song.d), '\n')
+```
+
+## Looking at what to expect if not random
+
+### Not random data
+
+```{r}
+notra.1 <- c(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+notra.2 <- c(1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0)
+notra.3 <- c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+notra.4 <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+notra.5 <- c(1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1)
+```
+
+#### cmax
+
+```{r}
+cmax(notra.1)
+cmax(notra.2)
+cmax(notra.3)
+cmax(notra.4)
+cmax(notra.5)
+```
+
+#### Method 1
+
+```{r}
+method1(notra.1)
+method1(notra.2)
+method1(notra.3)
+method1(notra.4)
+method1(notra.5)
+```
+
+#### Method 2
+
+```{r}
+method2(notra.1)
+method2(notra.2)
+method2(notra.3)
+method2(notra.4)
+method2(notra.5)
+```
+
+# Hypothesis Testing (Dr. B's way)
+
+## H-Test for Cmax
+
+H0: The notes are missed randomly
+H1: The notes are not missed randomly
+
+# Resampling WITHOUT Replacement
+
+```{r}
+n <- 1000
+perm.resample <- function(v) {
+  shuffled <- matrix(nrow=n, ncol=length(v))
+  for (j in 1:length(v))
+    for (i in 1:n) {
+    shuffled[i,j] <- (sample(v, size = length(v), replace = FALSE))[j]
+  }
+  return(shuffled)
+}
+```
+
+```{r}
+samples.a <- perm.resample(song.a)
+samples.b <- perm.resample(song.b)
+samples.c <- perm.resample(song.c)
+samples.d <- perm.resample(song.d)
+```
+
+## Test Cmax on Resampled Data
+
+```{r}
+cmax.test <- function(m, song) {
+  cmax.vals <- c()
+  for (i in 1:nrow(m)) {
+    cmax.vals[i] <- cmax(m[i,])
+  }
+  cmax.test.stat <- cmax(song)
+  pval <- 2*min(sum(cmax.vals >= cmax.test.stat), sum(cmax.vals <= cmax.test.stat))/1000
+  return(pval)
+}
+```
+
+## P-Value
+```{r}
+cmax.test(samples.a, song.a)
+cmax.test(samples.b, song.b)
+cmax.test(samples.c, song.c)
+cmax.test(samples.d, song.d)
+```
+
+# H-Test Method 2
+
+## Num of Misses / Num of Miss Streaks on Resampled Data
+```{r}
+method1.test <- function(m,song) {
+  method1.vals <- c()
+  for (i in 1:nrow(m)) {
+    method1.vals[i] <- method1(m[i,])
+  }
+  method1.test.stat <- method1(song)
+  pval <- 2*min(sum(method1.vals >= method1.test.stat), sum(method1.vals <= method1.test.stat))/1000
+  formatted.pval <- format.pval(pval, digits = 10)
+  return(formatted.pval)
+}
+```
+
+## Pvalue
+```{r}
+method1.test(samples.a, song.a)
+method1.test(samples.b, song.b)
+method1.test(samples.c, song.c)
+method1.test(samples.d, song.d)
+```
+
+
+# H-Test for Method 3
+** Not working **
+## NumHits on resampled Data
+```{r}
+samples.numHits <- function(m) {
+  numHits.vals <- c()
+  for (i in 1:nrow(m)) {
+    numHits.vals[i] <- method2(m[i,])
+  }
+  return(numHits.vals)
+}
+```
+
+```{r}
+method2.a <- samples.numHits(samples.a)
+method2.b <- samples.numHits(samples.b)
+method2.c <- samples.numHits(samples.c)
+method2.d <- samples.numHits(samples.d)
+```
+
+distance vectors: 
+song a - (1,4,2)
+song.b - (5,2)
+song.c - (2,6,3)
+song.d - (1,1,1)
+
+# New Method: Runs test
+
+```{r}
+methodRuns <- function(v) {
+  threshold = median(v)
+  
+  runs.test(v, alternative = "two.sided", threshold, pvalue = "exact")
+}
+```
+
+```{r}
+cat('\n', '--- CALCULATIONS FOR RUNS TEST ---', '\n')
+methodRuns(song.a)
+cat('\n')
+methodRuns(song.b)
+cat('\n')
+methodRuns(song.c)
+cat('\n')
+methodRuns(song.d)
+```
+
+# Bootstrapping runs method
+
+```{r}
+bootstraps.runs.a <- c()
+for (i in 1:1000) {
+  bsample.a <- sample(song.a, n.song.a, replace = TRUE)
+  bootstraps.a <- c(median(bsample.a), bootstraps.a)
+}
+
+boot.sa.a <- matrix(sample(song.a, size = n.song.a * nboot, replace = TRUE), nboot, n.song.a)
+
+methodRuns(apply(boot.sa.a, 1, method2))
+bootstat.runs.a <- apply(bootstat.a, 2, methodRuns)
+```
+
+```{r}
+bootstrap <- function(x, nboot, n){
+  bootstraps <- c()
+  
+  for (i in 1:nboot) {
+  bsample <- sample(x, n, replace = TRUE)
+   bootstraps <- c(median(bsample), bootstraps)
+}
+
+boot.sa <- matrix(sample(x, size = n * nboot, replace = TRUE), nboot, n)
+}
+```
+
+```{r}
+nboot <- 10000
+bootsa.a <- bootstrap(song.a, nboot, n.song.a)
+bootsa.b <- bootstrap(song.b, nboot, n.song.b)
+bootsa.c <- bootstrap(song.c, nboot, n.song.c)
+bootsa.d <- bootstrap(song.d, nboot, n.song.d)
+```
+
+# Try Runs Test on Distances of Resampled Data
+
+```{r}
+# function to compute distances on each row of resampled matrix
+samples.numHits <- function(m) {
+  numHits.vals <- vector(mode = "list", length = nrow(m))
+    for (i in 1:nrow(m)) {
+    numHits.vals[[i]] <- method2(m[i,])
+    }
+  return(numHits.vals)
+}
+```
+
+
+```{r}
+# function to compute runs.test on distances
+runs.test.numHits <- function(list) {
+  distances <- Reduce(c,list)
+  test <- runs.test(distances)
+  pval <- test$p.value
+  stat <- test$statistic
+  return(c(pval, stat))
+}
+```
+
+```{r}
+runs.test(Reduce(c,samples.numHits(bootsa.a)), level = 0.95, method = "percentile")
+```
+
+```{r}
+runs.test.numHits(samples.numHits(bootsa.b))
+```
+
+```{r}
+runs.test.numHits(samples.numHits(bootsa.c))
+```
+
+```{r}
+runs.test.numHits(samples.numHits(bootsa.b))
+```
+
+# Plots
+
+```{r}
+dist.a <- Reduce(c, samples.numHits(bootsa.a))
+dist.b <- Reduce(c, samples.numHits(bootsa.a))
+dist.c <- Reduce(c, samples.numHits(bootsa.a))
+dist.d <- Reduce(c, samples.numHits(bootsa.a))
+
+length.a <- seq.int(1, length(dist.a), 1)
+length.b <- seq.int(1, length(dist.b), 1)
+length.c <- seq.int(1, length(dist.c), 1)
+length.d <- seq.int(1, length(dist.d), 1)
+
+```
+
+
+```{r}
+plot(length.a, dist.a)
+plot(length.b, dist.b)
+plot(length.c, dist.c)
+plot(length.d, dist.d)
+```
+
+# Real data (Songs 1-4)
+
+## Judith
+
+```{r}
+judith <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/Judith.txt", header = TRUE, sep = " ")
+head(judith)
+
+judith <- as.numeric(judith)
+```
+
+```{r}
+judith.boot <- bootstrap(judith, 1000, length(judith))
+judith.boot1 <- bootstrap(judith, 100, length(judith))
+
+
+cmax.test(judith.boot, judith)
+
+```
+
+```{r}
+method1.test(judith.boot, judith)
+```
+
+```{r}
+method2.test(judith.boot, judith)
+```
+
+```{r}
+runs.test.numHits(samples.numHits(judith.boot1))
+```
+
+
+## Hurts
+
+```{r}
+hurts <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/Hurts.txt", sep = " ", header = FALSE)
+head(hurts)
+
+hurts <- as.numeric(hurts)
+hurts.boot <- bootstrap(hurts, 100, length(hurts))
+```
+
+```{r}
+cmax.test(hurts.boot, hurts)
+```
+
+```{r}
+method1.test(hurts.boot, hurts)
+```
+
+```{r}
+method2.test(hurts.boot, hurts)
+```
+
+```{r}
+runs.test.numHits(samples.numHits(hurts.boot))
+```
+
+## Funky
+
+```{r}
+funky <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/Funky.txt", header = TRUE, sep = " ")
+head(funky)
+
+funky <- as.numeric(funky)
+funky.boot <- bootstrap(funky, 1000, length(funky))
+funky.boot1 <- bootstrap(funky, 100, length(funky))
+```
+
+```{r}
+cat('---Test Results for Funky Data---', '\n')
+cat('cmax Test: ', cmax.test(funky.boot, funky),  '\n')
+cat('Method 1 Test: ', method1.test(funky.boot, funky),  '\n')
+cat('Method 2 Test: ', method2.test(funky.boot, funky),  '\n')
+cat('Runs Test: ', runs.test.numHits(samples.numHits(funky.boot)),  '\n')
+```
+
+## American Girl
+
+```{r}
+americanGirl <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/AmericanGirl.txt", header = TRUE, sep = " ")
+head(americanGirl)
+
+americanGirl <- as.numeric(americanGirl)
+americanGirl.boot <- bootstrap(americanGirl, 2000, length(americanGirl))
+americanGirl.boot1 <- bootstrap(americanGirl, 100, length(americanGirl))
+```
+
+```{r}
+cat('---Test Results for American Girl Data---', '\n')
+cat('cmax Test: ', cmax.test(americanGirl.boot, americanGirl),  '\n')
+cat('Method 1 Test: ', method1.test(americanGirl.boot, americanGirl),  '\n')
+cat('Method 2 Test: ', method2.test(americanGirl.boot, americanGirl),  '\n')
+cat('Runs Test: ', runs.test.numHits(samples.numHits(americanGirl.boot1)),  '\n')
+```
+
+# CI's & Fixing P-values
+
+## Method 1 -- Conf Int on Proportions
+```{r}
+samples.method1 <- function(m) {
+  method1.vals <- vector(length = nrow(m))
+    for (i in 1:nrow(m)) {
+    method1.vals[i] <- method1(m[i,])
+    }
+  method1.vals <- method1.vals[!is.nan(method1.vals)]
+  return(method1.vals)
+}
+```
+
+```{r}
+conf.int.method1 <- function (samples) {
+  interval <- quantile(samples.method1(samples), c(0.025, 0.975))
+  return(interval)
+}
+```
+
+## Method 2 -- Conf Interval on Median Distance
+```{r}
+conf.int.method2 <- function (list) {
+  medians <- c()
+  for (i in 1:length(list)) {
+    medians[i] <- median(list[[i]])
+  }
+  medians <- medians[!is.null(medians)]
+  medians <- medians[!is.na(medians)]
+  conf.int <- quantile(medians, c(0.025, 0.975))
+  return(conf.int)
+}
+```
+
+## Runs Test -- Confidence Interval on # of Runs
+```{r}
+samples.runs <- function(m) {
+  runs.vals <- vector(length = nrow(m))
+    for (i in 1:nrow(m)) {
+    runs.vals[i] <- runs.test(m[i,])[4]
+    }
+  return(runs.vals)
+}
+```
+
+```{r}
+conf.int.runs <- function (list) {
+  runs.val <- Reduce(c,list)
+  conf.int <- quantile(runs.val, c(0.025, 0.975))
+  return(conf.int)
+}
+```
+
+# Serial Test
+
+```{r}
+serialMethod <- function(v) {
+  count <- 0
+  j <- 1
+  
+  hits <- c()
+  distance <- c()
+  
+  
+  for (i in 1:length(v)) {
+    if (isTRUE(v[i] == 0 && v[i + 1] == 1)) {
+      count <- count + 1
+      hits[i] <- count
+    }
+    else {
+      count <- 0
+      hits[i] <- count
+    }
+    
+    for (j in 1:length(v)-1) {
+      if (isTRUE(hits[i] == 0 & hits[i+j] == 0)) {
+        distance[i] <- hits[i+j-1]
+        j <- j+1
+        } else {
+          j<- j+1
+        }
+      }
+    suppressWarnings(numHits <- hits)
+  }
+  
+  distance <- distance[!is.na(distance)]
+  distance <- distance[distance!=0]
+  
+  if (v[1] == 0 && v[2] == 1) {
+    distance <- distance[2:length(song.a)]
+    distance <- distance[!is.na(distance)]
+  } 
+  else {
+    distance <- sum(distance)
+  }
+  return(distance)
+}
+```
+
+```{r}
+serialMethod.test <- function(m) {
+  serialMethod.vals <- c()
+  
+  for(i in 1:nrow(m)) {
+    serialMethod.vals <- serialMethod(m[i,])
+  }
+  
+  return(serialMethod.vals)
+}
+```
+
+```{r}
+serialMethod.test(wolf.boot1)
+```
+
+
+
+## Wolf
+
+```{r}
+wolf <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/Wolf.txt", header = TRUE, sep = " ")
+head(wolf)
+
+wolf <- as.numeric(wolf)
+wolf.boot <- bootstrap(wolf, 1000, length(wolf))
+wolf.boot1 <- bootstrap(wolf, 100, length(wolf))
+```
+
+```{r}
+cat('---Method 1 for Wolf Data---', '\n')
+cat('Method 1 Test P-value: ', method1.test(wolf.boot, wolf),  '\n')
+cat('Method 1 Test Confidence Interval: ', conf.int.method1(wolf.boot),  '\n')
+```
+
+```{r}
+cat('---Method 2 for Wolf Data---', '\n')
+cat('Method 2 Test P-value: ', method2.test(wolf.boot, wolf),  '\n')
+cat('Method 1 Test Confidence Interval: ', conf.int.method2(wolf.boot),  '\n')
+```
+
+
+```{r}
+cat('---Runs Test for Wolf Data---', '\n')
+cat('Runs Test P-value: ', runs.test.numHits(samples.numHits(wolf.boot1)),  '\n')
+cat('Runs Test Confidence Interval: ', conf.int.runs(samples.runs(wolf.boot1)),  '\n')
+```
+
+```{r}
+cat('---Serial Test for Wolf Data---', '\n')
+cat('Serial Test: ', serialMethod.test(wolf.boot1),  '\n')
+```
+
+```{r}
+cat('---Test Results for Wolf Data---', '\n')
+cat('Method 1 Test: ', method1.test(wolf.boot, wolf),  '\n')
+cat('Method 2 Test: ', method2.test(wolf.boot, wolf),  '\n')
+cat('Runs Test: ', runs.test.numHits(samples.numHits(wolf.boot1)),  '\n')
+
+```
+
+## Watchtower
+
+```{r}
+watchtower <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/Watchtower.txt", header = TRUE, sep = " ")
+head(watchtower)
+
+watchtower <- as.numeric(watchtower)
+watchtower.boot <- bootstrap(watchtower, 1000, length(watchtower))
+watchtower.boot1 <- bootstrap(watchtower, 100, length(watchtower))
+```
+
+```{r}
+cat('---Method 1 for Watchtower Data---', '\n')
+cat('Method 1 Test P-value: ', method1.test(watchtower.boot, watchtower),  '\n')
+cat('Method 1 Test Confidence Interval: ', conf.int.method1(watchtower.boot),  '\n')
+```
+
+```{r}
+cat('---Method 2 for Watchtower Data---', '\n')
+cat('Method 2 Test P-value: ', method2.test(watchtower.boot, watchtower),  '\n')
+cat('Method 2 Test Confidence Interval: ', conf.int.method2(watchtower.boot),  '\n')
+```
+
+
+```{r}
+cat('---Runs Test for Watchtower Data---', '\n')
+cat('Runs Test P-value: ', runs.test.numHits(samples.numHits(wolf.boot1)),  '\n')
+cat('Runs Test Confidence Interval: ', conf.int.runs(samples.runs(wolf.boot1)),  '\n')
+```
+
+```{r}
+cat('---Serial Test for Watchtower Data---', '\n')
+cat('Serial Test: ', serialMethod.test(watchtower.boot1),  '\n')
+```
+
+```{r}
+cat('---Test Results for Watchtower Data---', '\n')
+cat('cmax Test: ', cmax.test(watchtower.boot, watchtower),  '\n')
+cat('Method 1 Test: ', method1.test(watchtower.boot, watchtower),  '\n')
+cat('Method 2 Test: ', method2.test(watchtower.boot, watchtower),  '\n')
+cat('Runs Test: ', runs.test.numHits(samples.numHits(watchtower.boot1)),  '\n')
+```
+
+
+## Ring of Fire
+
+```{r}
+ringoffire <- read.delim(file = "/Users/briannacirillo/Documents/MA 380/Project/ActualSongFiles/RingofFire.txt", header = TRUE, sep = " ")
+head(ringoffire)
+
+ringoffire <- as.numeric(ringoffire)
+ringoffire.boot <- bootstrap(ringoffire, 1000, length(ringoffire))
+ringoffire.boot1 <- bootstrap(ringoffire, 100, length(ringoffire))
+```
+
+```{r}
+cat('---Method 1 for Ring of Fire Data---', '\n')
+cat('Method 1 Test P-value: ', method1.test(ringoffire.boot, ringoffire),  '\n')
+cat('Method 1 Test Confidence Interval: ', conf.int.method1(ringoffire.boot),  '\n')
+```
+
+```{r}
+cat('---Method 2 for Ring of Fire Data---', '\n')
+cat('Method 2 Test P-value: ', method2.test(ringoffire.boot, ringoffire),  '\n')
+cat('Method 2 Test Confidence Interval: ', conf.int.method2(ringoffire.boot),  '\n')
+```
+
+
+```{r}
+cat('---Runs Test for Ring of Fire Data---', '\n')
+cat('Runs Test P-value: ', runs.test.numHits(samples.numHits(ringoffire.boot1)),  '\n')
+cat('Runs Test Confidence Interval: ', conf.int.runs(samples.runs(ringoffire.boot1)),  '\n')
+```
+
+```{r}
+cat('---Serial Test for Ring of Fire Data---', '\n')
+cat('Serial Test: ', serialMethod.test(ringoffire.boot1),  '\n')
+```
+
+```{r}
+cat('---Test Results for Ring of Fire Data---', '\n')
+cat('cmax Test: ', cmax.test(ringoffire.boot, ringoffire),  '\n')
+cat('Method 1 Test: ', method1.test(ringoffire.boot, ringoffire),  '\n')
+cat('Method 2 Test: ', method2.test(ringoffire.boot, ringoffire),  '\n')
+cat('Runs Test: ', runs.test.numHits(samples.numHits(ringoffire.boot1)),  '\n')
+```
+
+
+```{r}
+runs.test <-
+function(x, exact = FALSE, alternative = c("two.sided", "less", "greater"))
+{
+  DNAME <- deparse(substitute(x))
+  METHOD <- ifelse(exact,"Exact runs test", "Approximate runs rest")
+  alternative <- match.arg(alternative)
+  x <- x[is.finite(x)]
+  N <- as.integer(length(x))
+  if (N < 1L) 
+    stop("not enough 'x' data")
+  if (!is.numeric(x)) 
+    stop("'x' must be numeric")
+  x.s <- if (length(unique(x)) == 2) (x == unique(x)[1])*1 
+  else (x > median(as.matrix(x)))*1
+  m <- sum(1 - x.s)
+  n <- N - m
+  R <- 1
+  for (i in 1:(N - 1))
+  {
+    if (x.s[i] != x.s[i+1])  R <- R + 1
+  }
+  STATISTIC <- setNames(R, "Runs")
+  P.even <- function(m,n,r) 2*choose(m-1,r-1)*choose(n-1,r-1)/choose(m + n,n)
+  P.odd <- function(m,n,r)
+    (choose(m-1,r-1)*choose(n-1,r) + choose(n-1,r-1)*choose(m-1,r))/choose(m + n,n) 
+  if (exact)
+  {
+    if (any(is.na(P.even(m,n,1:floor(R/2)))) || any(is.na(P.odd(m,n,1:floor(R/2)))))
+      stop("can't calculate exact p-value; please use approximate method")
+    if (R%%2 == 0)
+    {
+      p.val <- sum(P.even(m,n,1:(R/2))) + sum(P.odd(m,n,1:(R/2 - 1)))
+      p.val1 <- 1 - p.val + P.even(m,n,R/2)
+    }
+    else 
+    {
+      p.val <- sum(P.even(m,n,1:floor(R/2))) + sum(P.odd(m,n,1:floor(R/2))) 
+      p.val1 <- 1 - p.val + P.odd(m,n,floor(R/2))
+    }        
+  }
+  else
+    Z <- (R - 2*m*n/N - 1)/sqrt(2*m*n*(2*m*n - N)/(N^2*(N - 1)))
+  P.VAL <- switch(alternative, two.sided = ifelse(exact, 2*min(p.val,1 - p.val), 
+                  2*min(pnorm(Z),1- pnorm(Z))), less = ifelse(exact, p.val, pnorm(Z)),
+                  greater = ifelse(exact, p.val1, 1 - pnorm(Z)))
+  RVAL <- list(data.name = DNAME, method = METHOD, alternative = alternative,
+               statistic = STATISTIC, p.value = P.VAL)
+  class(RVAL) <- "htest"
+  return(RVAL)
+}
+
+```
+
+
+```{r}
+(runs.test(ringoffire.boot1))
+```
+
+```{r}
+ringoffire.boot1 <- as.vector(ringoffire.boot1)
+ringoffire
+runs.rof <- rev(rle(ringoffire.boot1))
+print(runs.rof)
+confint(runs.rof$lengths)
+length(runs.rof$lengths)
+
+runs.test(ringoffire.boot1)
+
+```
+
+
+too many runs would indicate that the data is going back and forth across a median of 0
+
+# Error and Power Tests
+
+```{r}
+ra.song.1 <-rbinom(500, 1, 0.5)
+boot.ra.1 <- bootstrap(ra.song.1, 2000, length(ra.song.1))
+```
+
+```{r}
+library(snpar)
+
+runs.test(boot.ra.1[1, ])$p.value
+```
+
+
+```{r}
+error <- function(n) {
+  x1 <-rbinom(n, 1, 0.5)
+  x <- bootstrap(x1, 100, length(x1))
+  pvals.runs <- rep(0, nrow(x))
+  for (i in 1:100) {
+    dist <- samples.numHits(x)
+    pvals.runs[i] <- snpar::runs.test(dist[[i]])$p.value
+  }
+  rr <- mean(pvals.runs < .05)
+  return(rr)
+}
+```
+
+```{r}
+x1 <-rbinom(50, 1, 0.5)
+x <- bootstrap(x1, 100, length(x1))
+pvals.runs <- rep(0, nrow(x))
+  for (i in 1:100) {
+    dist <- samples.numHits(x)
+    pvals.runs[i] <- snpar::runs.test(dist[[i]])$p.value
+  }
+  rr <- mean(pvals.runs < .05)
+  rr
+```
+
+
+```{r}
+x1 <-rbinom(50, 1, 0.5)
+x <- bootstrap(x1, 100, length(x1))
+pvals.runs <- rep(0, nrow(x))
+  for (i in 1:100) {
+    dist <- samples.numHits(x)
+    pvals.runs[i] <- snpar::runs.test(dist[[i]])$p.value
+  }
+  rr <- mean(pvals.runs < .05)
+  rr
+```
+
+```{r}
+x1 <-rbinom(50, 1, 0.5)
+x <- bootstrap(x1, 100, length(x1))
+pvals.runs <- rep(0, nrow(x))
+  for (i in 1:100) {
+    dist <- samples.numHits(x)
+    pvals.runs[i] <- snpar::runs.test(dist[[i]])$p.value
+  }
+  rr <- mean(pvals.runs < .05)
+  rr
+```
+
+```{r}
+error(50)
+```
+
+RR Simulation 1: 0.05
+RR Simulation 2: 0.09
+RR Simulation 3: 0.08
+RR Simulation 4: 0.04
+
+```{r}
+error(100)
+```
+
+RR Simulation 1: 0.04
+RR Simulation 2: 0.06
+RR Simulation 3: 0.04
+
+
+
+
+
+

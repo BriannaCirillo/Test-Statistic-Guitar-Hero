@@ -1,0 +1,285 @@
+---
+title: "Runs Test Power Simulations"
+output: html_notebook
+---
+
+```{r}
+getwd()
+```
+
+You need to do this every time you reopen a Rmd file or start a new one.
+```{r, message=FALSE}
+library(mosaic)
+library(haven)
+library(ggpubr)
+library(readxl)
+library(Rlab)
+
+library(randtests)
+library(snpar)
+```
+
+## METHOD 2
+# count number of hits between misses
+```{r}
+method2 <- function(v) {
+  # set number of hits to 0
+  count.hit <- 0
+  
+  # make an empty vector
+  hits <- c()
+  
+  j  <- 1
+  
+  distance <- c()
+  
+  for(i in 1:length(v)) {
+    # if a hit, count increases 
+    if (isTRUE(v[1] == 0)) {
+      
+    }
+    
+    if(v[i] == 0) {
+      count.hit <- count.hit + 1
+      hits[i] <- count.hit
+    }
+    else
+    {
+      count.hit <- 0
+      hits[i] <- count.hit
+    }
+    for (j in 1:length(v)-1) {
+      if (isTRUE(hits[i] == 0 & hits[i+j] == 0)) {
+        distance[i] <- hits[i+j-1]
+        j <- j+1
+        } 
+      else {
+          j<- j+1
+        }
+      }
+    suppressWarnings(numHits <- hits)
+  }
+ 
+   distance <- distance[!is.na(distance)]
+  distance <- distance[distance!=0]
+  
+  if (v[1] == 0) {
+    distance <- distance[2:length(v)]
+    distance <- distance[!is.na(distance)]
+  } 
+  else {
+    distance <- distance
+  }
+  
+  return(distance)
+}
+```
+
+# function to compute distances on each row of resampled matrix
+```{r}
+samples.numHits <- function(m) {
+  numHits.vals <- vector(mode = "list", length = nrow(m))
+    
+  for (i in 1:nrow(m)) {
+      numHits.vals[[i]] <- method2(m[i,])
+    }
+ 
+   return(numHits.vals)
+}
+```
+
+# function to compute runs.test on distances
+```{r}
+runs.test.numHits <- function(list) {
+  
+  distances <- Reduce(c,list)
+  
+  test <- runs.test(distances)
+  pval <- test$p.value
+  stat <- test$statistic
+  
+  return(c(pval, stat))
+}
+```
+
+## IMPLEMENTING A PARAMETRIC BOOTSTRAP
+# with a Bernoulli distribution
+```{r}
+parametricBootstrap <- function(v, n) {
+  
+  sampled <- matrix(nrow = n, ncol = length(v))
+  
+  for (j in 1:length(v)) {
+    for (i in 1:n) {
+      sampled[i, j] <- (sample(rbern(length(v), .50)))[j]
+    }
+  }
+  
+  return(sampled)
+}
+```
+
+# Original Runs Test Parametric Test Function
+```{r}
+runs.param=function(song,B=5000){
+  test.stat=runs.test.numHits(song)  # calculate actual test statistic
+  n = length(song)
+  p = mean(song)
+  # perform permutation test
+
+ tstar.b=rep(0,B) # vector to store results from permutation samples 
+
+
+  # collect results from permutation samples
+  for(b in 1:B){
+    song.tmp=sample(song)
+
+    # alternatively you could use
+    # song.tmp=rbinom(n,1,p)
+
+    tstar.b[b] = runs.test.numHits(song.tmp)
+  }
+
+  pval=(sum(tstar.b>test.stat)+1)/(B+1)  # calculates the p-value
+
+  return(pval)
+}
+```
+
+```{r}
+# The following code reads in each set of generated data and calculates the p-value for each song
+# storing it in the matrix pval
+
+beg=proc.time()  # This is part of the process to determine how long your R code takes to run (not crucial for the project)
+
+nperm=500   ##  The number of permutation samples (B) to use when determining your p-value.  
+              ##  Those that have fast functions (taking less than a second) may consider increasing nboot to something larger like 5000 
+
+pval=matrix(0,11,100)  # allocate space for the p-values There are 11 rows in this matrix (one for each scenario) and 100 columns (one for every song for the 8 scenarios)
+
+
+# first scenario --> positive pairwise correlation w/ short song
+
+# The next line needs to be changed so that you can read in the first matrix of songs from your path, not the path shown.
+
+p20_pos30_n200=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p20_corrpos30_n200_r100.txt"), ncol=200, byrow=T)
+
+for(i in 1:100){
+  pval[1,i]=suppressWarnings(runs.param(p20_pos30_n200[i,], nperm))
+}
+
+```
+
+
+```{r}
+# second scenario --> positive pairwise correlations w/ 600 notes
+p20_pos30_n600=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p20_corrpos30_n600_r100.txt"),ncol=600,byrow=T)
+
+for(i in 1:100){
+  pval[2,i]=suppressWarnings(runs.param(p20_pos30_n200[i,],nperm))
+}
+```
+```{r}
+# third scenario --> blocks w/ 200 notes
+p_varies_block_n200=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.varies_block_n200_r100.txt"),ncol=200,byrow=T)
+
+for(i in 1:100){
+  pval[3,i]=suppressWarnings(runs.param(p_varies_block_n200[i,],nperm))
+}
+```
+
+```{r}
+# fourth scenario --> blocks w/ 600 notes
+p_varies_block_n600=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.varies_block_n600_r100.txt"),ncol=600,byrow=T)
+
+for(i in 1:100){
+  pval[4,i]=suppressWarnings(runs.param(p_varies_block_n600[i,],nperm))
+}
+```
+
+```{r}
+# fifth scenario --> autoregressive model w/ 200 notes, correlation p=0.5
+
+p10_ar50_n200=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.10_ar50_n200_r100.txt"),ncol=200,byrow=T)
+
+for(i in 1:100){
+  pval[5,i]=suppressWarnings(runs.param(p10_ar50_n200[i,],nperm))
+}
+
+```
+```{r}
+# sixth scenario --> autoregressive model w/ 600 notes, correlation p=0.5
+
+p10_ar50_n600=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.10_ar50_n600_r100.txt"),ncol=600,byrow=T)
+
+for(i in 1:100){
+  pval[6,i]=suppressWarnings(runs.param(p10_ar50_n600[i,],nperm))
+}
+
+```
+
+```{r}
+# seventh scenario --> autoregressive model w/ 200 notes, correlation p=0.3
+p10_ar30_n200=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.10_ar30_n200_r100.txt"),ncol=200,byrow=T)
+
+for(i in 1:100){
+  pval[7,i]=suppressWarnings(runs.param(p10_ar30_n200[i,],nperm))
+}
+```
+
+```{r}
+# eighth scenario --> autoregressive model w/ 600 notes, correlation p=0.3
+p10_ar30_n600=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.10_ar30_n600_r100.txt"),ncol=600,byrow=T)
+
+for(i in 1:100){
+  pval[8,i]=suppressWarnings(runs.param(p10_ar30_n600[i,],nperm))
+}
+```
+
+```{r}
+# ninth scenario --> autoregressive model w/ 200 notes, probability of missing a note is p=0.2
+
+p20_ar50_n200=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.20_ar50_n200_r100.txt"),ncol=200,byrow=T)
+
+for(i in 1:100){
+  pval[9,i]=suppressWarnings(runs.param(p20_ar50_n200[i,],nperm))
+}
+```
+```{r}
+# tenth scenario --> autoregressive model w/ 600 notes, probability of missing a note is p=0.2
+
+p20_ar50_n600=matrix(scan("D:/Documents/Desktop/Monmouth/FA_2020/MA380/Project/Final Simulations/p.20_ar50_n600_r100.txt"),ncol=200,byrow=T)
+
+for(i in 1:100){
+  pval[10,i]=suppressWarnings(runs.param(p20_ar50_n600[i,],nperm))
+}
+```
+
+```{r}
+## To get the random notes: generating data under the Null Hypothesis and calculating "power" - what value should this be close too?
+
+for(i in 1:100){
+  fakesong=rbinom(200,1,0.2)
+  pval[11,i]=suppressWarnings(runs.param(fakesong, nperm))
+}
+
+
+# This tells you how long your code took to run (how long it took to do your "power study" - this is a useful
+# thing to include in your final report)
+proc.time()-beg
+
+
+# Use the p-values for all simulated songs for each scenario to approximate the power of your method under each type of alternative
+power=matrix(0,11,5)  # allocate space for the approximated power
+alpha=c(0.001, 0.005, 0.01, 0.05, 0.10)  # defines alpha (Type I error) levels
+
+# loops through each scenario and level of alpha to find power
+for(i in 1:11){
+  for(j in 1:5){
+     power[i,j]=mean(pval[i,]<alpha[j])  # number of p-values less than alpha divided by total number of p-values
+  }
+}
+
+# contains power for each scenario
+power
+```
